@@ -1,7 +1,7 @@
 import pc from 'picocolors';
 import type { BridgeHealth, CommitSuggestion, GhCliStatus, GitDiffInfo, GitStatusResult } from './types.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.1';
 
 export function printBanner(): void {
   console.log();
