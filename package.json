@@ -1,6 +1,9 @@
 {
-  "name": "diffnote",
+  "name": "@genoventures-labs/diffnote",
   "version": "1.0.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "AI-powered Git commit messages and GitHub CLI push workflow for your current working directory, powered by ModelHitch.",
   "type": "module",
   "main": "./dist/index.js",

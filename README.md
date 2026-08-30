@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/diffnote"><img src="https://img.shields.io/npm/v/diffnote.svg?style=flat-square" alt="npm version"/></a>
-  <a href="https://www.npmjs.com/package/diffnote"><img src="https://img.shields.io/npm/dm/diffnote.svg?style=flat-square" alt="npm downloads"/></a>
+  <a href="https://www.npmjs.com/package/@genoventures-labs/diffnote"><img src="https://img.shields.io/npm/v/@genoventures-labs/diffnote.svg?style=flat-square" alt="npm version"/></a>
+  <a href="https://www.npmjs.com/package/@genoventures-labs/diffnote"><img src="https://img.shields.io/npm/dm/@genoventures-labs/diffnote.svg?style=flat-square" alt="npm downloads"/></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/bobbybacklogs/diffnote.svg?style=flat-square" alt="license"/></a>
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933.svg?style=flat-square" alt="node version"/>
   <a href="https://github.com/bobbybacklogs/diffnote/releases"><img src="https://img.shields.io/github/v/release/bobbybacklogs/diffnote?style=flat-square" alt="GitHub release"/></a>
@@ -33,7 +33,7 @@ Diffnote is a command-line utility that automates Git commit message generation 
 Run Diffnote directly without installing:
 
 ```bash
-npx diffnote
+npx @genoventures-labs/diffnote
 ```
 
 ### Global Installation
@@ -41,7 +41,13 @@ npx diffnote
 Install globally using npm:
 
 ```bash
-npm install -g diffnote
+npm install -g @genoventures-labs/diffnote
+```
+
+After global installation, the CLI is available as `diffnote`:
+
+```bash
+diffnote
 ```
 
 ---
