@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { parseArgs } from '../src/cli.js';
-import { isGitRepository, getRepoRoot, getRelativeCwd, getGitStatus, getDiffInfo } from '../src/git.js';
+import {
+  isGitRepository,
+  getRepoRoot,
+  getRelativeCwd,
+  getGitStatus,
+  getDiffInfo,
+  hasStagedChanges,
+  getLatestCommitInfo,
+  getBranchSyncStatus,
+} from '../src/git.js';
 import { checkBridgeHealth } from '../src/modelhitch.js';
 import { getGhCliStatus } from '../src/gh.js';
 
@@ -63,6 +72,16 @@ describe('CLI Argument Parser', () => {
     expect(opts.bridge).toBe('http://localhost:3939/v1');
     expect(opts.hint).toBe('test message');
   });
+
+  it('parses amend, recent, and allow-empty flags', () => {
+    const opts = parseArgs(['node', 'diffnote', '--amend', '--recent', '--allow-empty']);
+    expect(opts.amend).toBe(true);
+    expect(opts.recent).toBe(true);
+    expect(opts.allowEmpty).toBe(true);
+
+    const optsLast = parseArgs(['node', 'diffnote', '--last']);
+    expect(optsLast.recent).toBe(true);
+  });
 });
 
 describe('Git Scoped Utilities', () => {
@@ -93,6 +112,28 @@ describe('Git Scoped Utilities', () => {
     expect(typeof diff.activeDiff).toBe('string');
     expect(typeof diff.insertions).toBe('number');
     expect(typeof diff.deletions).toBe('number');
+  });
+
+  it('checks staged changes status', () => {
+    const staged = hasStagedChanges();
+    expect(typeof staged).toBe('boolean');
+  });
+
+  it('retrieves latest commit info', () => {
+    const info = getLatestCommitInfo();
+    expect(info).not.toBeNull();
+    if (info) {
+      expect(typeof info.hash).toBe('string');
+      expect(typeof info.subject).toBe('string');
+      expect(typeof info.author).toBe('string');
+    }
+  });
+
+  it('checks branch sync status', () => {
+    const sync = getBranchSyncStatus();
+    expect(typeof sync.ahead).toBe('number');
+    expect(typeof sync.behind).toBe('number');
+    expect(typeof sync.hasUpstream).toBe('boolean');
   });
 });
 

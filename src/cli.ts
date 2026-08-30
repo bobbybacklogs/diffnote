@@ -4,8 +4,11 @@ import pc from 'picocolors';
 import { input, select, confirm } from '@inquirer/prompts';
 import {
   commitChanges,
+  getBranchSyncStatus,
   getDiffInfo,
   getGitStatus,
+  getLatestCommitInfo,
+  hasStagedChanges,
   isGitRepository,
   stageAllInCwd,
 } from './git.js';
@@ -76,6 +79,12 @@ export function parseArgs(rawArgs: string[]): CliOptions {
       options.raw = true;
     } else if (arg === '--yes' || arg === '-y') {
       options.yes = true;
+    } else if (arg === '--amend') {
+      options.amend = true;
+    } else if (arg === '--recent' || arg === '--last') {
+      options.recent = true;
+    } else if (arg === '--allow-empty') {
+      options.allowEmpty = true;
     } else if (arg === '--model' || arg === '-m') {
       options.model = args[++i];
     } else if (arg.startsWith('--model=')) {
@@ -131,19 +140,72 @@ export async function runCli(): Promise<void> {
   }
 
   const gitStatus = getGitStatus(cwd);
-  let diffInfo = getDiffInfo(cwd, options.staged);
 
   if (options.status) {
+    const diffInfo = getDiffInfo(cwd, options.staged, true);
     const bridgeHealth = await checkBridgeHealth(options.bridge);
     const ghStatus = getGhCliStatus(cwd);
     printStatusDashboard(gitStatus, diffInfo, bridgeHealth, ghStatus);
     return;
   }
 
+  // If working tree is clean and user didn't request --recent or --amend
+  if (gitStatus.isClean && !options.recent && !options.amend) {
+    if (options.command === 'push' || options.push) {
+      const sync = getBranchSyncStatus(cwd);
+      if (sync.ahead > 0) {
+        if (!options.raw) {
+          printBanner();
+          console.log(pc.cyan(`\n  ⏳ Pushing ${sync.ahead} unpushed commit(s) on ${gitStatus.branch} to GitHub...`));
+        }
+        const pushResult = pushToGitHub(cwd, gitStatus.branch, !gitStatus.hasUpstream);
+        if (pushResult.success) {
+          console.log(pc.green('  ✓ Pushed successfully to GitHub!'));
+          if (pushResult.commitUrl) {
+            console.log(pc.bold('    Commit URL : ') + pc.cyan(pushResult.commitUrl));
+          }
+        } else {
+          console.error(pc.red(`  ✗ Push failed:\n    ${pushResult.output}`));
+        }
+        return;
+      } else {
+        if (!options.raw) {
+          printBanner();
+          console.log(pc.green(`\n  ✓ Working directory is clean and up to date on ${gitStatus.branch}.`));
+          console.log(pc.dim('  No uncommitted changes and no unpushed commits.\n'));
+        }
+        return;
+      }
+    }
+
+    if (!options.raw) {
+      printBanner();
+      const latest = getLatestCommitInfo(cwd);
+      console.log(pc.green(`\n  ✓ Working tree is clean in ./${gitStatus.relativeCwd} (no uncommitted changes).`));
+      if (latest) {
+        console.log(pc.dim(`  Latest commit : `) + pc.cyan(latest.hash) + pc.dim(` — ${latest.subject} (${latest.author})`));
+      }
+      const sync = getBranchSyncStatus(cwd);
+      if (sync.ahead > 0) {
+        console.log(pc.yellow(`  Branch status : ${sync.ahead} commit(s) ahead of remote (run "diffnote push" to push).`));
+      }
+
+      console.log(pc.bold('\n  Options:'));
+      console.log(pc.dim('  • Make changes to files in this directory to draft a new commit.'));
+      console.log(pc.dim('  • Run ') + pc.cyan('diffnote review --recent') + pc.dim(' to inspect your latest commit.'));
+      console.log(pc.dim('  • Run ') + pc.cyan('diffnote --amend') + pc.dim(' to regenerate or amend the latest commit.'));
+      console.log(pc.dim('  • Run ') + pc.cyan('diffnote push') + pc.dim(' to push commits to GitHub.'));
+      console.log(pc.dim('  • Run ') + pc.cyan('diffnote status') + pc.dim(' for full diagnostics.\n'));
+    }
+    return;
+  }
+
+  let diffInfo = getDiffInfo(cwd, options.staged, options.recent || options.amend);
+
   // Handle stage all flag
   if (options.all) {
     stageAllInCwd(cwd);
-    diffInfo = getDiffInfo(cwd, true);
+    diffInfo = getDiffInfo(cwd, true, options.recent || options.amend);
   }
 
   // Check if working tree inside cwd has any changes
@@ -257,11 +319,14 @@ export async function runCli(): Promise<void> {
 
   while (!doCommit) {
     try {
+      const isAmendMode = options.amend || diffInfo.diffType === 'recent';
       const choice = await select({
         message: 'How would you like to proceed?',
         choices: [
           {
-            name: `Commit changes with this message`,
+            name: isAmendMode
+              ? `Amend latest commit with this message (${pc.dim('git commit --amend')})`
+              : `Commit changes with this message`,
             value: 'commit',
           },
           {
@@ -284,6 +349,9 @@ export async function runCli(): Promise<void> {
       });
 
       if (choice === 'commit') {
+        if (isAmendMode) {
+          options.amend = true;
+        }
         doCommit = true;
         break;
       }
@@ -349,12 +417,22 @@ export async function runCli(): Promise<void> {
   }
 
   // Ensure changes are staged before committing
-  if (gitStatus.stagedFiles.length === 0) {
+  if (!options.amend && !hasStagedChanges(cwd)) {
     stageAllInCwd(cwd);
   }
 
+  // Guard against committing when nothing is staged
+  if (!options.amend && !options.allowEmpty && !hasStagedChanges(cwd)) {
+    console.log(pc.yellow('\n  Notice: No staged changes found in this directory to commit.'));
+    console.log(pc.dim('  Ensure your modified files are inside this directory and not ignored by .gitignore.\n'));
+    return;
+  }
+
   const commitMsg = finalBody ? `${finalTitle}\n\n${finalBody}` : finalTitle;
-  const commitResult = commitChanges(commitMsg, cwd);
+  const commitResult = commitChanges(commitMsg, cwd, {
+    amend: options.amend,
+    allowEmpty: options.allowEmpty,
+  });
 
   if (!commitResult.success) {
     console.error(pc.red(`\n  Commit failed: ${commitResult.error}\n`));
@@ -362,7 +440,7 @@ export async function runCli(): Promise<void> {
   }
 
   console.log(
-    pc.green('  ✓ Committed successfully: ') +
+    pc.green(options.amend ? '  ✓ Amended successfully: ' : '  ✓ Committed successfully: ') +
     pc.cyan(commitResult.hash || 'HEAD') +
     pc.dim(` "${finalTitle}"`)
   );

@@ -9,6 +9,9 @@ export {
   stageFilesInCwd,
   commitChanges,
   gitPush,
+  hasStagedChanges,
+  getLatestCommitInfo,
+  getBranchSyncStatus,
 } from './git.js';
 export {
   DEFAULT_BRIDGE_URL,

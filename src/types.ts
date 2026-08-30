@@ -61,6 +61,9 @@ export interface CliOptions {
   dryRun: boolean;
   raw: boolean;
   yes: boolean;
+  recent?: boolean;
+  amend?: boolean;
+  allowEmpty?: boolean;
   model?: string;
   bridge?: string;
   provider?: string;

@@ -135,7 +135,11 @@ export function getGitStatus(cwd: string = process.cwd()): GitStatusResult {
 }
 
 /** Get git diff scoped strictly to the current working directory */
-export function getDiffInfo(cwd: string = process.cwd(), forceStaged = false): GitDiffInfo {
+export function getDiffInfo(
+  cwd: string = process.cwd(),
+  forceStaged = false,
+  includeRecent = false
+): GitDiffInfo {
   // Staged diff strictly inside cwd: git diff --cached -- .
   let stagedDiff = '';
   try {
@@ -164,8 +168,8 @@ export function getDiffInfo(cwd: string = process.cwd(), forceStaged = false): G
   } else if (unstagedDiff.trim().length > 0) {
     activeDiff = unstagedDiff;
     diffType = 'unstaged';
-  } else {
-    // If working tree has no diff, check recent commit changes scoped to cwd
+  } else if (includeRecent) {
+    // Only check recent commit diff when explicitly requested
     try {
       const recent = runGit(['diff', 'HEAD~1..HEAD', '--', '.'], cwd);
       if (recent.trim().length > 0) {
@@ -256,11 +260,56 @@ export function stageFilesInCwd(files: string[], cwd: string = process.cwd()): v
   runGit(['add', '--', ...files], cwd);
 }
 
-/** Create git commit */
-export function commitChanges(message: string, cwd: string = process.cwd()): { success: boolean; hash?: string; error?: string } {
+/** Check if there are staged changes strictly inside current working directory */
+export function hasStagedChanges(cwd: string = process.cwd()): boolean {
   try {
-    // Write message to temporary file or pass via -m
-    const res = spawnSync('git', ['commit', '-m', message], {
+    const res = spawnSync('git', ['diff', '--cached', '--quiet', '--', '.'], { cwd });
+    // Exit code 1 indicates differences exist
+    return res.status === 1;
+  } catch {
+    return false;
+  }
+}
+
+/** Get details of the latest commit affecting the current working directory */
+export function getLatestCommitInfo(
+  cwd: string = process.cwd()
+): { hash: string; subject: string; author: string } | null {
+  try {
+    const info = runGit(['log', '-1', '--pretty=format:%h%x09%s%x09%an', '--', '.'], cwd);
+    if (!info) return null;
+    const [hash, subject, author] = info.split('\t');
+    return { hash: hash || '', subject: subject || '', author: author || '' };
+  } catch {
+    return null;
+  }
+}
+
+/** Check if current branch is ahead or behind its remote upstream */
+export function getBranchSyncStatus(
+  cwd: string = process.cwd()
+): { ahead: number; behind: number; hasUpstream: boolean } {
+  try {
+    const counts = runGit(['rev-list', '--left-right', '--count', 'HEAD...@{u}'], cwd);
+    const parts = counts.split('\t').map(Number);
+    return { ahead: parts[0] || 0, behind: parts[1] || 0, hasUpstream: true };
+  } catch {
+    return { ahead: 0, behind: 0, hasUpstream: false };
+  }
+}
+
+/** Create git commit */
+export function commitChanges(
+  message: string,
+  cwd: string = process.cwd(),
+  options: { amend?: boolean; allowEmpty?: boolean } = {}
+): { success: boolean; hash?: string; error?: string } {
+  try {
+    const args = ['commit', '-m', message];
+    if (options.amend) args.push('--amend');
+    if (options.allowEmpty) args.push('--allow-empty');
+
+    const res = spawnSync('git', args, {
       cwd,
       encoding: 'utf8',
     });
