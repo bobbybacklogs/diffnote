@@ -10,7 +10,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "diffnote": "./dist/cli.js"
+    "diffnote": "dist/cli.js"
   },
   "files": [
     "dist",
