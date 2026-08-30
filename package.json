@@ -1,0 +1,64 @@
+{
+  "name": "diffnote",
+  "version": "1.0.0",
+  "description": "AI-powered Git commit messages and GitHub CLI push workflow for your current working directory, powered by ModelHitch.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "diffnote": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node ./dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bobbybacklogs/diffnote.git"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "ai",
+    "modelhitch",
+    "llm",
+    "cli",
+    "github",
+    "gh",
+    "conventional-commits",
+    "developer-tools",
+    "diff"
+  ],
+  "author": "Bobby Backlogs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bobbybacklogs/diffnote/issues"
+  },
+  "homepage": "https://github.com/bobbybacklogs/diffnote#readme",
+  "dependencies": {
+    "@inquirer/prompts": "^7.3.2",
+    "modelhitch": "^0.15.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsup": "^8.4.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.8.2",
+    "vitest": "^2.1.9"
+  }
+}
