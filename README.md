@@ -1,7 +1,7 @@
 # diffnote
 
 <p align="center">
-  <img src="./repo_assets/diff_hero.png" alt="diffnote" width="100%"/>
+  <img src="./repo_assets/nobg/lockup.png" alt="diffnote" width="50%"/>
 </p>
 
 <p align="center">
@@ -45,6 +45,10 @@ npm install -g diffnote
 ```
 
 ---
+<p align="center">
+  <img src="./repo_assets/nobg/diff_hero.png" alt="diffnote" width="50%"/>
+</p>
+
 
 ## Quick Start
 
